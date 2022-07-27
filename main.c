@@ -2,154 +2,170 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
-// "essential" values
+const int WIN_W = 640,
+          WIN_H = 480;
 
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+/* TYPE/STRUCT FOR PROGRAM */
 
-unsigned int a_tick = 0;
-unsigned int b_tick = 0;
-unsigned int dt = 0;
+typedef struct _mandala_pix mandala_pix;
 
-SDL_Event events;
-SDL_bool run = SDL_TRUE;
+struct _mandala_pix {
+    double x, y,
+    p1, p1o, p2,
+    pseudo_timer;
+    SDL_bool pr;
+};
 
-// program values:
+void set_mandala_pix_values (mandala_pix* pix)
+{
+    pix->x   = 120;
+    pix->y   = 240;
 
-double pix_x,
-       pix_y,
-       pix_p1,
-       pix_p1o,
-       pix_p2,
-       pseudo_timer,
-       dt_multiply,
-       dt_m_alt;
+    pix->p1  = rand() % (21-10) + 10;             // between 10 and 20
+    pix->p1o = pix->p1;                           // origin value
+    pix->p2  = (double)rand() / (double)RAND_MAX; // between 0 and 0.999...
+    pix->pr  = SDL_FALSE;                         // reverse "projection"
 
-SDL_bool pix_pr;
+    pix->pseudo_timer = .0;
+}
 
-int nb_init = 0;
+mandala_pix* create_mandala_pix ()
+{
+    mandala_pix* pix = malloc(sizeof(mandala_pix));
+    set_mandala_pix_values(pix);
+    return pix;
+}
 
-// functions:
+/* FUNCTIONS FOR PROGRAM */
 
-uint8_t randColorByte() {return rand() % (256-10) + 100;}
+void set_black_screen(SDL_Renderer* ren)
+{
+    SDL_SetRenderDrawColor(ren, (uint8_t) 0, (uint8_t) 0, (uint8_t) 0, (uint8_t) 255);
+    SDL_RenderClear(ren);
+}
+
+uint8_t randColorByte()
+{
+    return rand() % (256-10) + 100;
+}
+
+/* Personnaly used for experimenting but not used in the final program.
 
 double fibonacci(int toDec)
 {
     double U2,U1,U0;
     double phi = 0.0;
     U1 = 0; U0 = 1;
- 
+
     for (int i=0; i <= toDec; i++)
     {
         U2=U1+U0;
         U0 =U1;
         U1 =U2;
     }
- 
+
     phi = U1/U0;
- 
+
     return phi;
 }
 
-void init_values()
+*/
+
+/* PROGRAM */
+
+int main (int argc, char** argv)
 {
+    (void) argc; (void) argv; // Because unused
 
-    pix_x = 120; pix_y = 240;
-    pix_p1 = rand() % (21-10) + 10;             // between 10 and 20
-    pix_p1o = pix_p1;                           // origin value
-    pix_p2 = (double)rand() / (double)RAND_MAX; // between 0 and 0.999...
-    pix_pr = SDL_FALSE;                         // reverse "projection"
-    pseudo_timer = .0;
+    /* SDL window initialization */
 
-    dt_multiply = rand() % (12-10) + 10;
-    if (dt_multiply==11) {dt_multiply = 20; pix_x = 240;}
+    if (SDL_Init (SDL_INIT_VIDEO) < 0) { printf("ERROR: %s", SDL_GetError()); return 1; };
 
-}
+    SDL_Window* win = SDL_CreateWindow ("Mandala", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIN_W, WIN_H, 0);
+    if (!win) { printf("ERROR: %s", SDL_GetError()); return 1; }
 
-// program:
+    SDL_Renderer* ren = SDL_CreateRenderer (win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_Event event;
 
-int main( int argc, char* args[] )
-{
+    /* Program initialization */
 
-    SDL_Window* window     = NULL;
-    SDL_Renderer* renderer = NULL;
+    unsigned int dt = 0,      // Ticks values is used for calculation of delta time
+                 a_tick = 0,
+                 b_tick = 0;
 
-    if( SDL_Init( SDL_INIT_VIDEO ) < 0 )
+    srand(time(NULL)); // init for rand call
+
+    mandala_pix* pix = create_mandala_pix();
+
+    SDL_bool running = SDL_TRUE;
+
+    set_black_screen(ren);
+
+    /* Program execution */
+
+    while (running)
     {
-        printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
-    }
 
-    else
-    {
-        window = SDL_CreateWindow( "Mandala - write by Le Juez Victor", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
-        
-        if( window == NULL )
-        {
-            printf( "Window could not be created! SDL_Error: %s\n", SDL_GetError() );
-        }
+        /* SDL event handling */
 
-        else
+        while (SDL_PollEvent(&event))
         {
 
-            renderer =  SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED);
+            running = event.type != SDL_QUIT; // Close program if requested
 
-            dt_m_alt=fibonacci(7)*8; // alternative dt multiplicator (value that I found "randomly")
-
-            srand(time(NULL));  // init for rand call
-            init_values();      // init program values
-
-            while(run) // mandala program
+            if (event.type == SDL_MOUSEBUTTONDOWN) // Generate a new mandala
             {
-
-                while (SDL_PollEvent(&events))
-                {
-                    switch(events.type)
-                    {
-
-                        case SDL_WINDOWEVENT:
-                            if (events.window.event == SDL_WINDOWEVENT_CLOSE)
-                                run = SDL_FALSE; break;
-
-                        case SDL_MOUSEBUTTONDOWN: // new mandala
-                            SDL_SetRenderDrawColor(renderer, (uint8_t) 0, (uint8_t) 0, (uint8_t) 0, (uint8_t) 255);
-                            SDL_RenderClear(renderer); init_values(); break;
-
-                    }
-                }
-
-                a_tick = SDL_GetTicks();
-                dt = a_tick - b_tick;
-
-                if (dt>1000/60.0)
-                {
-                    b_tick = a_tick;
-
-                    // update
-
-                    pix_x += sin(pseudo_timer)*pix_p1*2;
-                    pix_y += cos(pseudo_timer)*pix_p1*2;
-                    pseudo_timer += (dt*dt_multiply);
-
-                    if      ( pix_pr == SDL_FALSE && pix_p1 > 0 )       pix_p1 -= pix_p2;
-                    else if ( pix_pr == SDL_TRUE && pix_p1 < pix_p1o )  pix_p1 += pix_p2;
-
-                    else{if      ( pix_pr == SDL_FALSE ) pix_pr = SDL_TRUE;
-                         else if ( pix_pr == SDL_TRUE )  pix_pr = SDL_FALSE;}
-
-                    // draw
-
-                    SDL_SetRenderDrawColor(renderer, randColorByte(), randColorByte(), randColorByte(), (uint8_t) 255);
-                    SDL_RenderDrawPoint(renderer, (int) pix_x, (int) pix_y);
-                    SDL_RenderPresent(renderer);
-                }
-
+                set_mandala_pix_values(pix);
+                set_black_screen(ren);
             }
+
+        }
+
+        /* Delta Time calculation and display according to it */
+
+        a_tick = SDL_GetTicks();
+        dt = a_tick - b_tick;
+
+        if (dt>1000/60.0)
+        {
+            b_tick = a_tick;
+
+            /* Update program */
+
+            pix->x += sin(pix->pseudo_timer) * pix->p1;
+            pix->y += cos(pix->pseudo_timer) * pix->p1;
+
+            pix->pseudo_timer += .1;
+
+            if (pix->pr == SDL_FALSE)
+            {
+                if (pix->p1 > 0)
+                     pix->p1 -= pix->p2;
+                else pix->pr  = SDL_TRUE;
+            }
+            else if (pix->pr == SDL_TRUE)
+            {
+                if (pix->p1 < pix->p1o)
+                     pix->p1 += pix->p2;
+                else pix->pr  = SDL_FALSE;
+            }
+
+            /* Draw program */
+
+            SDL_SetRenderDrawColor(ren, randColorByte(), randColorByte(), randColorByte(), (uint8_t) 255);
+            SDL_RenderDrawPoint(ren, (int) pix->x, (int) pix->y);
+            SDL_RenderPresent(ren);
         }
     }
 
-    SDL_DestroyWindow(window);
+    /* Closing the program */
+
+    SDL_DestroyRenderer (ren);
+    SDL_DestroyWindow   (win);
+
+    free(pix);
     SDL_Quit();
 
     return 0;
