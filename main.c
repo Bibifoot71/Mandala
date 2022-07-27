@@ -1,11 +1,12 @@
-#include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
+
 #include <SDL2/SDL.h>
 
-const int WIN_W = 640,
-          WIN_H = 480;
+#define WIN_W 640
+#define WIN_H 480
 
 /* TYPE/STRUCT FOR PROGRAM */
 
