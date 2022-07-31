@@ -50,7 +50,7 @@ void set_black_screen(SDL_Renderer* ren)
 
 uint8_t randColorByte()
 {
-    return rand() % (256-10) + 100;
+    return rand() % 256;
 }
 
 /* Personnaly used for experimenting but not used in the final program.
