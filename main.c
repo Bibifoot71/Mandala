@@ -28,12 +28,12 @@ struct _Clock
     uint32_t delta_ms;
 };
 
-Clock* Clock_Init()
+Clock Clock_Init()
 {
-    Clock* clock = malloc(sizeof(Clock));
+    Clock clock;
 
-    clock->last_tick = 0;
-    clock->delta_ms  = 0;
+    clock.last_tick = 0;
+    clock.delta_ms  = 0;
 
     return clock;
 }
@@ -65,10 +65,10 @@ void MandalaPix_SetValues(MandalaPix* pix)
     pix->phase = 0.f;
 }
 
-MandalaPix* MandalaPix_Create()
+MandalaPix MandalaPix_Create()
 {
-    MandalaPix* pix = malloc(sizeof(MandalaPix));
-    MandalaPix_SetValues(pix);
+    MandalaPix pix;
+    MandalaPix_SetValues(&pix);
     return pix;
 }
 
@@ -140,11 +140,11 @@ int main(int argc, char** argv)
 
     /* Program initialization */
 
-    Clock* clock = Clock_Init();
+    Clock clock = Clock_Init();
 
     srand(time(NULL));
 
-    MandalaPix* pix = MandalaPix_Create();
+    MandalaPix pix = MandalaPix_Create();
 
     const SDL_Rect screen_aera = { 0, 0, WIN_W, WIN_H };
 
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
 
     while (running)
     {
-        Clock_Update(clock);
+        Clock_Update(&clock);
 
         /* SDL event handling */
 
@@ -170,29 +170,29 @@ int main(int argc, char** argv)
 
             if (event.type == SDL_MOUSEBUTTONDOWN) // Generate a new mandala
             {
-                MandalaPix_SetValues(pix);
+                MandalaPix_SetValues(&pix);
                 RenderClearToBlack(ren);
             }
         }
 
         /* Update program */
 
-        pix->x += sin(pix->phase) * pix->p1;
-        pix->y += cos(pix->phase) * pix->p1;
+        pix.x += sin(pix.phase) * pix.p1;
+        pix.y += cos(pix.phase) * pix.p1;
 
-        pix->p1 += pix->p2;
-        pix->phase += 0.1f;
+        pix.p1 += pix.p2;
+        pix.phase += 0.1f;
 
-        if (pix->p1 < 0 || pix->p1 > pix->p1o)
+        if (pix.p1 < 0 || pix.p1 > pix.p1o)
         {
-            pix->p2 = -pix->p2;
+            pix.p2 = -pix.p2;
         }
 
         /* Draw pixel */
 
         SDL_SetRenderDrawColor(ren, randColorByte(), randColorByte(), randColorByte(), 255);
 
-        SDL_RenderDrawPoint(ren, pix->x, pix->y);
+        SDL_RenderDrawPoint(ren, pix.x, pix.y);
 
         /* Copy of the rendering to redisplay it after the next 'RenderClear', this avoids display glitches */
 
@@ -217,15 +217,13 @@ int main(int argc, char** argv)
 
         /* Limit CPU usage */
 
-        if (SDL_GetTicks() < (clock->last_tick + TPF))
-            SDL_Delay((clock->last_tick + TPF) - SDL_GetTicks());
+        if (SDL_GetTicks() < (clock.last_tick + TPF))
+            SDL_Delay((clock.last_tick + TPF) - SDL_GetTicks());
     }
 
     /* Closing the program */
 
     free(pixels_data);
-    free(pix);
-    free(clock);
 
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
